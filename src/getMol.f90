@@ -236,6 +236,10 @@ subroutine initialGuess(ierr)
    use quick_sad_guess_module, only: getSadDense
    use quick_exception_module
    use quick_io_module, only: chk_read
+#ifdef CUEST
+   use quick_cuest_module, only: cuest_correct_P, CUEST_CORRECT_NORM_QUICK_TO_CUEST
+#endif
+
    implicit none
    logical :: present
    integer :: failed, fail
@@ -288,8 +292,14 @@ subroutine initialGuess(ierr)
       if (quick_method%readden) then
          if (master) then
             call chk_read('dense', nbasis, nbasis, quick_qm_struct%dense)
+#ifdef CUEST
+            if (quick_method%usecuest) call cuest_correct_P(quick_qm_struct%dense, CUEST_CORRECT_NORM_QUICK_TO_CUEST)
+#endif
             if (quick_method%unrst) then
                call chk_read('denseb', nbasis, nbasis, quick_qm_struct%denseb)
+#ifdef CUEST
+               if (quick_method%usecuest) call cuest_correct_P(quick_qm_struct%denseb, CUEST_CORRECT_NORM_QUICK_TO_CUEST)
+#endif
             endif
          endif
       else if (quick_method%SAD) then
