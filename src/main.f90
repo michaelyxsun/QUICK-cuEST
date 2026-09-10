@@ -65,6 +65,7 @@
     use, intrinsic::iso_c_binding, only: c_int64_t, c_int8_t, c_double, c_loc, c_bool
     use quick_cuest_module
     use quick_aux_basis_sph_module, only: quick_aux_basis_sph, read_aux_basis_sph
+    use quick_cuest_module, only: cuest_correct_P, CUEST_CORRECT_REORDER_AND_NORM_CUEST_TO_QUICK
 #endif
 
     implicit none
@@ -79,6 +80,7 @@
     integer(c_int64_t) :: cuest_xc_nradpts
     integer(c_int64_t) :: hostmax, hosttotal, hostallocs, devmax, devtotal, devallocs
     logical :: hasK
+    double precision, allocatable :: cuest_tmp2d(:,:)
 #endif
 
     common /timer/ t1_t, t2_t
@@ -332,12 +334,29 @@
             call chk_write('xyz', 3, natom, quick_molspec%xyz)
             call chk_write('iattype', natom, quick_molspec%iattype)
 #if !defined(RESTART_HDF5)
+#ifdef CUEST
+            if (quick_method%usecuest) then
+               if (.not. allocated(cuest_tmp2d)) allocate(cuest_tmp2d(nbasis, nbasis))
+               cuest_tmp2d = quick_qm_struct%dense
+               call cuest_correct_P(cuest_tmp2d, CUEST_CORRECT_REORDER_AND_NORM_CUEST_TO_QUICK)
+               call chk_write('dense', nbasis, nbasis, cuest_tmp2d)
+
+               if (quick_method%UNRST) then
+                  cuest_tmp2d = quick_qm_struct%denseb
+                  call cuest_correct_P(cuest_tmp2d, CUEST_CORRECT_REORDER_AND_NORM_CUEST_TO_QUICK)
+                  call chk_write('dense', nbasis, nbasis, cuest_tmp2d)
+               endif
+            else
+#endif
             call chk_write('dense', nbasis, nbasis, quick_qm_struct%dense)
             if (quick_method%UNRST) then
                 call chk_write('denseb', nbasis, nbasis, quick_qm_struct%denseb)
             end if
-            call chk_close()
+#ifdef CUEST
+            endif
 #endif
+            call chk_close()
+#endif ! !defined(RESTART_DF5)
         endif
     endif
 
@@ -384,10 +403,27 @@
             call chk_write('xyz', 3, natom, quick_molspec%xyz)
             call chk_write('iattype', natom, quick_molspec%iattype)
 #if !defined(RESTART_HDF5)
+#ifdef CUEST
+            if (quick_method%usecuest) then
+               if (.not. allocated(cuest_tmp2d)) allocate(cuest_tmp2d(nbasis, nbasis))
+               cuest_tmp2d = quick_qm_struct%dense
+               call cuest_correct_P(cuest_tmp2d, CUEST_CORRECT_REORDER_AND_NORM_CUEST_TO_QUICK)
+               call chk_write('dense', nbasis, nbasis, cuest_tmp2d)
+
+               if (quick_method%UNRST) then
+                  cuest_tmp2d = quick_qm_struct%denseb
+                  call cuest_correct_P(cuest_tmp2d, CUEST_CORRECT_REORDER_AND_NORM_CUEST_TO_QUICK)
+                  call chk_write('dense', nbasis, nbasis, cuest_tmp2d)
+               endif
+            else
+#endif
             call chk_write('dense', nbasis, nbasis, quick_qm_struct%dense)
             if (quick_method%UNRST) then
               call chk_write('denseb', nbasis, nbasis, quick_qm_struct%denseb)
             end if
+#ifdef CUEST
+            endif
+#endif
             call chk_close()
 #endif
         endif
