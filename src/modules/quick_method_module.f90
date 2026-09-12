@@ -48,6 +48,7 @@ module quick_method_module
 
         ! the second section includes some advanced option
         logical :: debug =  .false.    ! debug mode
+        logical :: graddebug = .false. ! debug gradient TODO: remove
         logical :: nodirect = .false.  ! conventional scf
         logical :: readden = .false.  ! flag to read density matrix
         integer :: readxyz = -1       ! flag to read coordinates
@@ -707,6 +708,7 @@ module quick_method_module
             if (index(keyWD,'HESSIAN').ne.0)    self%analHess=.true.
             if (index(keyWD,'FREQ').ne.0)       self%freq=.true.
             if (index(keywd,'DEBUG').ne.0)      self%debug=.true.
+            if (index(keywd,'GRDBG').ne.0)      self%graddebug=.true.
             if (index(keyWD,'RDSAD').ne.0)      self%readSAD=.true.  ! READSAD would clash with READ
             if (index(keyWD,'WRSAD').ne.0) then
                self%writeSAD = .true.
