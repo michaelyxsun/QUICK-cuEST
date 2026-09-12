@@ -74,28 +74,25 @@ typedef struct {
 } quick_cuest_compute_mem_t;
 
 typedef struct {
+    void *d_grad;
+    void *d_grad_chg;
+
     cuestWorkspace_t                         *S_wksp;
     cuestOverlapDerivativeComputeParameters_t S_par;
-    void                                     *d_dSdR;
 
     cuestWorkspace_t                         *T_wksp;
     cuestKineticDerivativeComputeParameters_t T_par;
-    void                                     *d_dTdR;
 
     cuestWorkspace_t                           *V_wksp;
     cuestPotentialDerivativeComputeParameters_t V_par;
-    void                                       *d_dVdR_bas;
-    void                                       *d_dVdR_ptchg;
 
     cuestWorkspace_t                             *JK_wksp;
     cuestDFSymmetricDerivativeComputeParameters_t JK_par;
     cuestWorkspaceDescriptor_t                   *JK_vbs;
-    void                                         *d_dJKdR;
 
     cuestWorkspace_t                      *xc_wksp;
     cuestWorkspaceDescriptor_t            *xc_vbs;
     cuestXCPotentialRKSComputeParameters_t xc_par;
-    void                                  *d_dxcdR;
 } quick_cuest_grad_mem_t;
 
 typedef struct {

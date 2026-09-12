@@ -119,11 +119,12 @@ contains
 
 #ifdef CUEST
      if (quick_method%usecuest) then
-        call cuest_init_S_grad
-        call cuest_init_T_grad
-        call cuest_init_V_grad
-        call cuest_init_JK_grad(int(2000000000, c_int64_t))
         if(quick_method%DFT) call cuest_init_xc_grad(int(2000000000, c_int64_t))
+        call cuest_init_JK_grad(int(2000000000, c_int64_t))
+        call cuest_init_V_grad
+        call cuest_init_T_grad
+        call cuest_init_S_grad
+        call cuest_init_grad
      endif
 #endif
 
@@ -144,6 +145,7 @@ contains
 
 #ifdef CUEST
      if (quick_method%usecuest) then
+        call cuest_deinit_grad
         call cuest_deinit_S_grad
         call cuest_deinit_T_grad
         call cuest_deinit_V_grad

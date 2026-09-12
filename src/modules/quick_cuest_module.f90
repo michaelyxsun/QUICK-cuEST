@@ -317,6 +317,16 @@ module quick_cuest_module
    ! -------- !
 
    interface
+      subroutine cuest_init_grad() bind(c, name="cuest_init_grad")
+      end subroutine cuest_init_grad
+   end interface
+
+   interface
+      subroutine cuest_deinit_grad() bind(c, name="cuest_deinit_grad")
+      end subroutine cuest_deinit_grad
+   end interface
+
+   interface
       subroutine cuest_init_S_grad() bind(c, name="cuest_init_S_grad")
       end subroutine cuest_init_S_grad
    end interface

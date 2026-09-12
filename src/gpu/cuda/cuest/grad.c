@@ -18,20 +18,30 @@
 #include "util.h"
 
 void
+cuest_init_grad ()
+{
+    cudaMallocChecked (&quick_cuest_grad_mem.d_grad, 3 * quick_cuest_data.natom * sizeof (double));
+}
+
+void
+cuest_deinit_grad ()
+{
+    cudaFreeChecked (quick_cuest_grad_mem.d_grad);
+    free_dev_alloc (3 * quick_cuest_data.natom * sizeof (double));
+}
+
+void
 cuest_init_S_grad ()
 {
     cuestHandle_t               handle = quick_cuest_struct.handle;
     cuestWorkspaceDescriptor_t *tmpWD  = quick_cuest_struct.tmpWD;
     uint64_t                    natom  = quick_cuest_data.natom;
 
-    const size_t grad_siz = 3 * natom * sizeof (double);
-    cudaMallocChecked (&quick_cuest_grad_mem.d_dSdR, grad_siz);
-
     checkCuestErrors (cuestParametersCreate (CUEST_OVERLAPDERIVATIVECOMPUTE_PARAMETERS,
                                              &quick_cuest_grad_mem.S_par));
     checkCuestErrors (cuestOverlapDerivativeComputeWorkspaceQuery (
         handle, quick_cuest_struct.OEIntPlan, quick_cuest_grad_mem.S_par, tmpWD, NULL,
-        quick_cuest_grad_mem.d_dSdR));
+        quick_cuest_grad_mem.d_grad));
 
     MEMLOG_TMPWD ("S grad");
     quick_cuest_grad_mem.S_wksp = allocateWorkspace (tmpWD);
@@ -43,14 +53,10 @@ cuest_deinit_S_grad ()
     freeWorkspace (quick_cuest_grad_mem.S_wksp);
     checkCuestErrors (cuestParametersDestroy (CUEST_OVERLAPDERIVATIVECOMPUTE_PARAMETERS,
                                               quick_cuest_grad_mem.S_par));
-
-    cudaFreeChecked (quick_cuest_grad_mem.d_dSdR);
-    const size_t grad_siz = 3 * quick_cuest_data.natom * sizeof (double);
-    free_dev_alloc (grad_siz);
 }
 
 void
-cuest_get_S_grad (double *dSdR, double *P)
+cuest_get_S_grad (double *grad, double *P)
 {
     cuestHandle_t               handle    = quick_cuest_struct.handle;
     cuestWorkspaceDescriptor_t *persistWD = quick_cuest_struct.persistWD;
@@ -63,15 +69,11 @@ cuest_get_S_grad (double *dSdR, double *P)
     const size_t P_siz    = quick_cuest_PC_buf.P_siz;
     cudaMemcpyChecked (d_P, P, P_siz, cudaMemcpyHostToDevice);
 
-    printf ("%p\n%p\n%p\n%p\n%p\n%p\n", handle, quick_cuest_struct.OEIntPlan,
-            quick_cuest_grad_mem.S_par, quick_cuest_grad_mem.S_wksp, d_P,
-            quick_cuest_grad_mem.d_dSdR);
-
     checkCuestErrors (cuestOverlapDerivativeCompute (
         handle, quick_cuest_struct.OEIntPlan, quick_cuest_grad_mem.S_par,
-        quick_cuest_grad_mem.S_wksp, d_P, quick_cuest_grad_mem.d_dSdR));
+        quick_cuest_grad_mem.S_wksp, d_P, quick_cuest_grad_mem.d_grad));
 
-    cudaMemcpyChecked (dSdR, quick_cuest_grad_mem.d_dSdR, grad_siz, cudaMemcpyDeviceToHost);
+    cudaMemcpyChecked (grad, quick_cuest_grad_mem.d_grad, grad_siz, cudaMemcpyDeviceToHost);
 }
 
 void
@@ -81,14 +83,11 @@ cuest_init_T_grad ()
     cuestWorkspaceDescriptor_t *tmpWD  = quick_cuest_struct.tmpWD;
     uint64_t                    natom  = quick_cuest_data.natom;
 
-    const size_t grad_siz = 3 * natom * sizeof (double);
-    cudaMallocChecked (&quick_cuest_grad_mem.d_dTdR, grad_siz);
-
     checkCuestErrors (cuestParametersCreate (CUEST_KINETICDERIVATIVECOMPUTE_PARAMETERS,
                                              &quick_cuest_grad_mem.T_par));
     checkCuestErrors (cuestKineticDerivativeComputeWorkspaceQuery (
         handle, quick_cuest_struct.OEIntPlan, quick_cuest_grad_mem.T_par, tmpWD, NULL,
-        quick_cuest_grad_mem.d_dTdR));
+        quick_cuest_grad_mem.d_grad));
 
     MEMLOG_TMPWD ("T grad");
     quick_cuest_grad_mem.T_wksp = allocateWorkspace (tmpWD);
@@ -100,14 +99,10 @@ cuest_deinit_T_grad ()
     freeWorkspace (quick_cuest_grad_mem.T_wksp);
     checkCuestErrors (cuestParametersDestroy (CUEST_KINETICDERIVATIVECOMPUTE_PARAMETERS,
                                               quick_cuest_grad_mem.T_par));
-
-    cudaFreeChecked (quick_cuest_grad_mem.d_dTdR);
-    const size_t grad_siz = 3 * quick_cuest_data.natom * sizeof (double);
-    free_dev_alloc (grad_siz);
 }
 
 void
-cuest_get_T_grad (double *dTdR, double *P)
+cuest_get_T_grad (double *grad, double *P)
 {
     cuestHandle_t               handle    = quick_cuest_struct.handle;
     cuestWorkspaceDescriptor_t *persistWD = quick_cuest_struct.persistWD;
@@ -123,12 +118,12 @@ cuest_get_T_grad (double *dTdR, double *P)
 
     checkCuestErrors (cuestKineticDerivativeCompute (
         handle, quick_cuest_struct.OEIntPlan, quick_cuest_grad_mem.T_par,
-        quick_cuest_grad_mem.T_wksp, d_P, quick_cuest_grad_mem.d_dTdR));
+        quick_cuest_grad_mem.T_wksp, d_P, quick_cuest_grad_mem.d_grad));
 
     cudaFreeChecked (d_P);
     free_dev_alloc (P_siz);
 
-    cudaMemcpyChecked (dTdR, quick_cuest_grad_mem.d_dTdR, grad_siz, cudaMemcpyDeviceToHost);
+    cudaMemcpyChecked (grad, quick_cuest_grad_mem.d_grad, grad_siz, cudaMemcpyDeviceToHost);
 }
 
 void
@@ -137,19 +132,17 @@ cuest_init_V_grad ()
     cuestHandle_t               handle   = quick_cuest_struct.handle;
     cuestWorkspaceDescriptor_t *tmpWD    = quick_cuest_struct.tmpWD;
     uint64_t                    natom    = quick_cuest_data.natom;
-    uint64_t                    nextatom = quick_cuest_data.nextatom;
+    uint64_t                    ntotatom = natom + quick_cuest_data.nextatom;
 
-    const size_t grad_siz       = 3 * natom * sizeof (double);
-    const size_t ptchg_grad_siz = 3 * nextatom * sizeof (double);
-    cudaMallocChecked (&quick_cuest_grad_mem.d_dVdR_bas, grad_siz);
-    cudaMallocChecked (&quick_cuest_grad_mem.d_dVdR_ptchg, ptchg_grad_siz);
+    const size_t grad_chg_siz = 3 * ntotatom * sizeof (double);
+    cudaMallocChecked (&quick_cuest_grad_mem.d_grad_chg, grad_chg_siz);
 
     checkCuestErrors (cuestParametersCreate (CUEST_POTENTIALDERIVATIVECOMPUTE_PARAMETERS,
                                              &quick_cuest_grad_mem.V_par));
     checkCuestErrors (cuestPotentialDerivativeComputeWorkspaceQuery (
-        handle, quick_cuest_struct.OEIntPlan, quick_cuest_grad_mem.V_par, tmpWD,
-        quick_cuest_data.nextatom, quick_cuest_data.allxyz_gpu, quick_cuest_data.allchg_gpu, NULL,
-        quick_cuest_grad_mem.d_dVdR_bas, quick_cuest_grad_mem.d_dVdR_ptchg));
+        handle, quick_cuest_struct.OEIntPlan, quick_cuest_grad_mem.V_par, tmpWD, ntotatom,
+        quick_cuest_data.allxyz_gpu, quick_cuest_data.allchg_gpu, NULL, quick_cuest_grad_mem.d_grad,
+        quick_cuest_grad_mem.d_grad_chg));
 
     MEMLOG_TMPWD ("V grad");
     quick_cuest_grad_mem.V_wksp = allocateWorkspace (tmpWD);
@@ -162,42 +155,50 @@ cuest_deinit_V_grad ()
     checkCuestErrors (cuestParametersDestroy (CUEST_POTENTIALDERIVATIVECOMPUTE_PARAMETERS,
                                               quick_cuest_grad_mem.V_par));
 
-    cudaFreeChecked (quick_cuest_grad_mem.d_dVdR_bas);
-    cudaFreeChecked (quick_cuest_grad_mem.d_dVdR_ptchg);
-    const size_t grad_siz       = 3 * quick_cuest_data.natom * sizeof (double);
-    const size_t ptchg_grad_siz = 3 * quick_cuest_data.nextatom * sizeof (double);
-    free_dev_alloc (grad_siz);
-    free_dev_alloc (ptchg_grad_siz);
+    cudaFreeChecked (quick_cuest_grad_mem.d_grad_chg);
+    const size_t grad_chg_siz
+        = 3 * (quick_cuest_data.natom + quick_cuest_data.nextatom) * sizeof (double);
+    free_dev_alloc (grad_chg_siz);
 }
 
 void
-cuest_get_V_grad (double *dVdR_bas, double *dVdR_ptchg, double *P)
+cuest_get_V_grad (double *grad, double *ptchg_grad, double *P)
 {
     cuestHandle_t               handle    = quick_cuest_struct.handle;
     cuestWorkspaceDescriptor_t *persistWD = quick_cuest_struct.persistWD;
     cuestAOBasis_t              basis     = quick_cuest_struct.basis;
     uint64_t                    nbasis    = quick_cuest_data.nbasis;
     uint64_t                    natom     = quick_cuest_data.natom;
+    uint64_t                    nextatom  = quick_cuest_data.nextatom;
+    uint64_t                    ntotatom  = natom + nextatom;
+
+    const size_t grad_siz     = 3 * natom * sizeof (double);
+    const size_t grad_chg_siz = 3 * ntotatom * sizeof (double);
+    double      *grad_chg     = malloc (grad_chg_siz);
 
     void        *d_P;
-    const size_t grad_siz       = 3 * natom * sizeof (double);
-    const size_t ptchg_grad_siz = 3 * quick_cuest_data.nextatom * sizeof (double);
-    const size_t P_siz          = nbasis * nbasis * sizeof (double);
+    const size_t P_siz = nbasis * nbasis * sizeof (double);
     cudaMallocChecked (&d_P, P_siz);
     cudaMemcpyChecked (d_P, P, P_siz, cudaMemcpyHostToDevice);
 
     checkCuestErrors (cuestPotentialDerivativeCompute (
         handle, quick_cuest_struct.OEIntPlan, quick_cuest_grad_mem.V_par,
-        quick_cuest_grad_mem.V_wksp, quick_cuest_data.nextatom, quick_cuest_data.allxyz_gpu,
-        quick_cuest_data.allchg_gpu, d_P, quick_cuest_grad_mem.d_dVdR_bas,
-        quick_cuest_grad_mem.d_dVdR_ptchg));
+        quick_cuest_grad_mem.V_wksp, ntotatom, quick_cuest_data.allxyz_gpu,
+        quick_cuest_data.allchg_gpu, d_P, quick_cuest_grad_mem.d_grad,
+        quick_cuest_grad_mem.d_grad_chg));
 
     cudaFreeChecked (d_P);
     free_dev_alloc (P_siz);
 
-    cudaMemcpyChecked (dVdR_bas, quick_cuest_grad_mem.d_dVdR_bas, grad_siz, cudaMemcpyDeviceToHost);
-    cudaMemcpyChecked (dVdR_ptchg, quick_cuest_grad_mem.d_dVdR_ptchg, ptchg_grad_siz,
+    cudaMemcpyChecked (grad, quick_cuest_grad_mem.d_grad, grad_siz, cudaMemcpyDeviceToHost);
+    cudaMemcpyChecked (grad_chg, quick_cuest_grad_mem.d_grad_chg, grad_chg_siz,
                        cudaMemcpyDeviceToHost);
+
+    for (size_t i = 0, end = 3 * natom; i < end; ++i)
+        grad[i] += grad_chg[i];
+
+    for (size_t i = 0, end = 3 * nextatom, di = 3 * natom; i < end; ++i)
+        ptchg_grad[i] = grad_chg[i + di];
 }
 
 void
@@ -206,9 +207,6 @@ cuest_init_JK_grad (int64_t dev_buf_siz)
     cuestHandle_t               handle = quick_cuest_struct.handle;
     cuestWorkspaceDescriptor_t *tmpWD  = quick_cuest_struct.tmpWD;
     uint64_t                    natom  = quick_cuest_data.natom;
-
-    const size_t grad_siz = 3 * natom * sizeof (double);
-    cudaMallocChecked (&quick_cuest_grad_mem.d_dJKdR, grad_siz);
 
     cuestWorkspaceDescriptor_t *vbs = malloc (sizeof (cuestWorkspaceDescriptor_t));
     vbs->hostBufferSizeInBytes      = 0;
@@ -219,7 +217,7 @@ cuest_init_JK_grad (int64_t dev_buf_siz)
                                              &quick_cuest_grad_mem.JK_par));
     checkCuestErrors (cuestDFSymmetricDerivativeComputeWorkspaceQuery (
         handle, quick_cuest_struct.DFIntPlan, quick_cuest_grad_mem.JK_par, vbs, tmpWD, 0.5, NULL,
-        -1.0, 1, &quick_cuest_data.nocc, NULL, quick_cuest_grad_mem.d_dJKdR));
+        -1.0, 1, &quick_cuest_data.nocc, NULL, quick_cuest_grad_mem.d_grad));
 
     MEMLOG_TMPWD ("JK grad");
     quick_cuest_grad_mem.JK_wksp = allocateWorkspace (tmpWD);
@@ -231,14 +229,10 @@ cuest_deinit_JK_grad ()
     freeWorkspace (quick_cuest_grad_mem.JK_wksp);
     checkCuestErrors (cuestParametersDestroy (CUEST_DFSYMMETRICDERIVATIVECOMPUTE_PARAMETERS,
                                               quick_cuest_grad_mem.JK_par));
-
-    cudaFreeChecked (quick_cuest_grad_mem.d_dJKdR);
-    const size_t grad_siz = 3 * quick_cuest_data.natom * sizeof (double);
-    free_dev_alloc (grad_siz);
 }
 
 void
-cuest_get_JK_grad (double *dJKdR, double *P, double *C)
+cuest_get_JK_grad (double *grad, double *P, double *C)
 {
     cuestHandle_t               handle    = quick_cuest_struct.handle;
     cuestWorkspaceDescriptor_t *persistWD = quick_cuest_struct.persistWD;
@@ -259,7 +253,7 @@ cuest_get_JK_grad (double *dJKdR, double *P, double *C)
     checkCuestErrors (cuestDFSymmetricDerivativeCompute (
         handle, quick_cuest_struct.DFIntPlan, quick_cuest_grad_mem.JK_par,
         quick_cuest_grad_mem.JK_vbs, quick_cuest_grad_mem.JK_wksp, 0.5, d_P, -1.0, 1, &nocc, d_C,
-        quick_cuest_grad_mem.d_dJKdR));
+        quick_cuest_grad_mem.d_grad));
 
-    cudaMemcpyChecked (dJKdR, quick_cuest_grad_mem.d_dJKdR, grad_siz, cudaMemcpyDeviceToHost);
+    cudaMemcpyChecked (grad, quick_cuest_grad_mem.d_grad, grad_siz, cudaMemcpyDeviceToHost);
 }
