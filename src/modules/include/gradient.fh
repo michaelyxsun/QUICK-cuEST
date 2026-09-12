@@ -655,8 +655,9 @@ contains
 #else
            call cuest_get_V_grad(cuest_gradbuf, cuest_gradbuf_ptchg, quick_qm_struct%dense)
 #endif
-           quick_qm_struct%gradient = quick_qm_struct%gradient + cuest_gradbuf
-           quick_qm_struct%ptchg_gradient = quick_qm_struct%ptchg_gradient + cuest_gradbuf_ptchg
+           ! subtract because of cuEST conventions
+           quick_qm_struct%gradient = quick_qm_struct%gradient - cuest_gradbuf
+           quick_qm_struct%ptchg_gradient = quick_qm_struct%ptchg_gradient - cuest_gradbuf_ptchg
         else
 #endif ! #ifdef CUEST
 
@@ -836,7 +837,7 @@ contains
      endif
 
 #ifdef CUEST
-     if (quick_method%usecuest) then
+     if (quick_method%usecuest.and..false.) then
         call cuest_get_S_grad(cuest_gradbuf, quick_scratch%hold)
         quick_qm_struct%gradient = quick_qm_struct%gradient + cuest_gradbuf
 
