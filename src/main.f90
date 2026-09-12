@@ -433,6 +433,7 @@
 #ifdef CUEST
     if (quick_method%usecuest) then
        ! deinit compute things
+       call cuest_deinit_oei_plan
        call cuest_deinit_eri_J
        if (hasK) call cuest_deinit_eri_K
        call cuest_deinit_df

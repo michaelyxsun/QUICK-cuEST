@@ -88,7 +88,7 @@ contains
 #endif
 #ifdef CUEST
      use, intrinsic :: iso_c_binding, only: c_int64_t
-     use quick_cuest_module, only: cuest_init_JK_grad, cuest_deinit_JK_grad, cuest_init_xc_grad, cuest_deinit_xc_grad
+     use quick_cuest_module
 #endif
      implicit double precision(a-h,o-z)
   
@@ -119,6 +119,9 @@ contains
 
 #ifdef CUEST
      if (quick_method%usecuest) then
+        call cuest_init_S_grad
+        call cuest_init_T_grad
+        call cuest_init_V_grad
         call cuest_init_JK_grad(int(2000000000, c_int64_t))
         if(quick_method%DFT) call cuest_init_xc_grad(int(2000000000, c_int64_t))
      endif
@@ -141,6 +144,9 @@ contains
 
 #ifdef CUEST
      if (quick_method%usecuest) then
+        call cuest_deinit_S_grad
+        call cuest_deinit_T_grad
+        call cuest_deinit_V_grad
         call cuest_deinit_JK_grad
         if(quick_method%DFT) call cuest_deinit_xc_grad
      endif
@@ -570,8 +576,15 @@ contains
 #ifdef MPIV
      use mpi
 #endif
+#ifdef CUEST
+     use quick_cuest_module, only: cuest_get_V_grad
+#endif
     implicit none
     integer :: Iatm, Imomentum, IIsh, JJsh, i, j, nshell_mpi
+#ifdef CUEST
+    double precision :: cuest_gradbuf(3*natom)
+    double precision :: cuest_gradbuf_ptchg(3*quick_molspec%nextatom)
+#endif
   
   !---------------------------------------------------------------------
   !  1) The derivative of the kinetic term
@@ -633,6 +646,18 @@ contains
         call gpu_upload_beta_density_matrix(quick_qm_struct%denseb)
 #endif
 
+#ifdef CUEST
+        if (quick_method%usecuest) then
+#ifdef OSHELL
+           call cuest_get_V_grad(cuest_gradbuf, cuest_gradbuf_ptchg, quick_qm_struct%dense + quick_qm_struct%denseb)
+#else
+           call cuest_get_V_grad(cuest_gradbuf, cuest_gradbuf_ptchg, quick_qm_struct%dense)
+#endif
+           quick_qm_struct%gradient = quick_qm_struct%gradient + cuest_gradbuf
+           quick_qm_struct%ptchg_gradient = quick_qm_struct%ptchg_gradient + cuest_gradbuf_ptchg
+        else
+#endif ! #ifdef CUEST
+
         if(.not. quick_method%hasF) then
           call gpu_get_oei_grad(quick_qm_struct%gradient,quick_qm_struct%ptchg_gradient)
         else
@@ -660,7 +685,10 @@ contains
 
         endif
 
-#else 
+#ifdef CUEST
+        endif
+#endif ! #ifdef CUEST
+#else ! #if defined(GPU) || defined(MPIV_GPU)
 #ifdef MPIV
      if (bMPI) then
         nshell_mpi = mpi_jshelln(mpirank)
@@ -681,7 +709,7 @@ contains
            call attrashellopt(IIsh,JJsh)
         enddo
      enddo
-#endif
+#endif ! #if defined(GPU) || defined(MPIV_GPU)
   
      RECORD_TIME(timer_end%T1eVGrad)
      timer_cumer%T1eVGrad=timer_cumer%T1eVGrad+timer_end%T1eVGrad-timer_begin%T1eVGrad
@@ -736,11 +764,17 @@ contains
 #ifdef MPIV
      use mpi
 #endif
+#ifdef CUEST
+     use quick_cuest_module, only: cuest_get_S_grad, cuest_get_T_grad
+#endif
      implicit double precision(a-h,o-z)
   
      integer II,JJ,KK,LL,NBI1,NBI2,NBJ1,NBJ2,NBK1,NBK2,NBL1,NBL2
      common /hrrstore/II,JJ,KK,LL,NBI1,NBI2,NBJ1,NBJ2,NBK1,NBK2,NBL1,NBL2
      logical :: ijcon
+#ifdef CUEST
+     double precision :: cuest_gradbuf(3*natom)
+#endif
   
   !  1)  The negative of the energy weighted density matrix element i j
   !   with the derivative of the ij overlap.
@@ -798,6 +832,27 @@ contains
            enddo
         enddo
      endif
+
+#ifdef CUEST
+     if (quick_method%usecuest) then
+        call cuest_get_S_grad(cuest_gradbuf, quick_scratch%hold)
+        quick_qm_struct%gradient = quick_qm_struct%gradient + cuest_gradbuf
+
+#ifdef OSHELL
+        call cuest_get_T_grad(cuest_gradbuf, quick_qm_struct%dense + quick_qm_struct%denseb)
+#else
+        call cuest_get_T_grad(cuest_gradbuf, quick_qm_struct%dense)
+#endif
+        quick_qm_struct%gradient = quick_qm_struct%gradient + cuest_gradbuf
+
+        ! NOTE: currently does nothing
+#ifdef MPIV
+        call MPI_BARRIER(MPI_COMM_WORLD,mpierror)
+#endif
+
+        return
+     endif
+#endif ! #ifdef CUEST
   
   !  The contribution to the derivative of energy with respect to nuclear
   !  postion for this term is: -(Sum over i,j) Q(i,j) dS(ij)/dXA

@@ -78,7 +78,7 @@ subroutine get1e(deltaO)
 #endif
 
 #if defined(CUDA) && defined(CUEST)
-   use quick_cuest_module, only: cuest_deinit_oei_plan, cuest_get_oei_T, cuest_get_oei_V, cuest_debuglog
+   use quick_cuest_module, only: cuest_get_oei_T, cuest_get_oei_V, cuest_debuglog
 #ifdef CUESTDEBUG
    use quick_cuest_module, only: cuest_correct_o, CUEST_CORRECT_REORDER_AND_NORM_CUEST_TO_QUICK
 #endif
@@ -149,9 +149,6 @@ subroutine get1e(deltaO)
 
             ! TODO: figure out what this is doing to prevent gradient from crashing
             if(quick_method%grad) call gpu_get_oei(cuest_T)
-
-            ! quick_qm_struct%o = quick_qm_struct%o - cuest_V
-            call cuest_deinit_oei_plan()
 
 #ifdef CUESTDEBUG
             tmp2d = cuest_T - cuest_V

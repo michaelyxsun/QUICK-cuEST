@@ -35,9 +35,6 @@ cuest_init_S_grad ()
 
     MEMLOG_TMPWD ("S grad");
     quick_cuest_grad_mem.S_wksp = allocateWorkspace (tmpWD);
-
-    // allocate device P buf
-    cudaMallocChecked (&quick_cuest_PC_buf.d_P[0], quick_cuest_PC_buf.P_siz);
 }
 
 void
@@ -53,7 +50,7 @@ cuest_deinit_S_grad ()
 }
 
 void
-cuest_S_grad (double *dSdR, double *P)
+cuest_get_S_grad (double *dSdR, double *P)
 {
     cuestHandle_t               handle    = quick_cuest_struct.handle;
     cuestWorkspaceDescriptor_t *persistWD = quick_cuest_struct.persistWD;
@@ -65,6 +62,10 @@ cuest_S_grad (double *dSdR, double *P)
     const size_t grad_siz = 3 * natom * sizeof (double);
     const size_t P_siz    = quick_cuest_PC_buf.P_siz;
     cudaMemcpyChecked (d_P, P, P_siz, cudaMemcpyHostToDevice);
+
+    printf ("%p\n%p\n%p\n%p\n%p\n%p\n", handle, quick_cuest_struct.OEIntPlan,
+            quick_cuest_grad_mem.S_par, quick_cuest_grad_mem.S_wksp, d_P,
+            quick_cuest_grad_mem.d_dSdR);
 
     checkCuestErrors (cuestOverlapDerivativeCompute (
         handle, quick_cuest_struct.OEIntPlan, quick_cuest_grad_mem.S_par,
@@ -106,7 +107,7 @@ cuest_deinit_T_grad ()
 }
 
 void
-cuest_T_grad (double *dTdR, double *P)
+cuest_get_T_grad (double *dTdR, double *P)
 {
     cuestHandle_t               handle    = quick_cuest_struct.handle;
     cuestWorkspaceDescriptor_t *persistWD = quick_cuest_struct.persistWD;
@@ -167,7 +168,7 @@ cuest_deinit_V_grad ()
 }
 
 void
-cuest_V_grad (double *dVdR_bas, double *dVdR_ptchg, double *P)
+cuest_get_V_grad (double *dVdR_bas, double *dVdR_ptchg, double *P)
 {
     cuestHandle_t               handle    = quick_cuest_struct.handle;
     cuestWorkspaceDescriptor_t *persistWD = quick_cuest_struct.persistWD;

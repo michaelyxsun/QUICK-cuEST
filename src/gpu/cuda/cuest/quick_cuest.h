@@ -214,13 +214,13 @@ void cuest_get_xc_nelec (double *C, double *nelec);
 
 void cuest_init_S_grad ();
 void cuest_deinit_S_grad ();
-void cuest_S_grad (double *dSdR, double *P);
+void cuest_get_S_grad (double *dSdR, double *P);
 void cuest_init_T_grad ();
 void cuest_deinit_T_grad ();
-void cuest_T_grad (double *dTdR, double *P);
+void cuest_get_T_grad (double *dTdR, double *P);
 void cuest_init_V_grad ();
 void cuest_deinit_V_grad ();
-void cuest_V_grad (double *dVdR_bas, double *dVdR_ptchg, double *P);
+void cuest_get_V_grad (double *dVdR_bas, double *dVdR_ptchg, double *P);
 
 void cuest_init_JK_grad (int64_t dev_buf_siz);
 void cuest_deinit_JK_grad ();

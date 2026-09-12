@@ -327,11 +327,11 @@ module quick_cuest_module
    end interface
 
    interface
-      subroutine cuest_S_grad(dSdR, P) bind(c, name="cuest_init_S_grad")
+      subroutine cuest_get_S_grad(dSdR, P) bind(c, name="cuest_get_S_grad")
          use, intrinsic :: iso_c_binding, only: c_double
          real(c_double), intent(out) :: dSdR(*)
          real(c_double), intent(in) :: P(*)
-      end subroutine
+      end subroutine cuest_get_S_grad
    end interface
 
    interface
@@ -345,11 +345,11 @@ module quick_cuest_module
    end interface
 
    interface
-      subroutine cuest_T_grad(dTdR, P) bind(c, name="cuest_init_T_grad")
+      subroutine cuest_get_T_grad(dTdR, P) bind(c, name="cuest_get_T_grad")
          use, intrinsic :: iso_c_binding, only: c_double
          real(c_double), intent(out) :: dTdR(*)
          real(c_double), intent(in) :: P(*)
-      end subroutine
+      end subroutine cuest_get_T_grad
    end interface
 
    interface
@@ -363,12 +363,12 @@ module quick_cuest_module
    end interface
 
    interface
-      subroutine cuest_V_grad(dVdR_bas, dVdR_ptchg, P) bind(c, name="cuest_init_V_grad")
+      subroutine cuest_get_V_grad(dVdR_bas, dVdR_ptchg, P) bind(c, name="cuest_get_V_grad")
          use, intrinsic :: iso_c_binding, only: c_double
          real(c_double), intent(out) :: dVdR_bas(*)
          real(c_double), intent(out) :: dVdR_ptchg(*)
          real(c_double), intent(in) :: P(*)
-      end subroutine
+      end subroutine cuest_get_V_grad
    end interface
 
    interface
