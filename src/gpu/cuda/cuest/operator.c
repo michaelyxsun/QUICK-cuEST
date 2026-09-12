@@ -134,9 +134,10 @@ cuest_get_oei_T (double *o)
 void
 cuest_get_oei_V (double *o)
 {
-    cuestHandle_t               handle = quick_cuest_struct.handle;
-    cuestWorkspaceDescriptor_t *tmpWD  = quick_cuest_struct.tmpWD;
-    cuestAOBasis_t              basis  = quick_cuest_struct.basis;
+    cuestHandle_t               handle     = quick_cuest_struct.handle;
+    cuestWorkspaceDescriptor_t *tmpWD      = quick_cuest_struct.tmpWD;
+    cuestAOBasis_t              basis      = quick_cuest_struct.basis;
+    uint64_t                    ntotalatom = quick_cuest_data.natom + quick_cuest_data.nextatom;
 
     uint64_t nbasis = quick_cuest_data.nbasis;
 
@@ -148,16 +149,14 @@ cuest_get_oei_V (double *o)
     checkCuestErrors (
         cuestParametersCreate (CUEST_POTENTIALCOMPUTE_PARAMETERS, &potential_compute_params));
     checkCuestErrors (cuestPotentialComputeWorkspaceQuery (
-        handle, quick_cuest_struct.OEIntPlan, potential_compute_params, tmpWD,
-        quick_cuest_data.ntotalatom, quick_cuest_data.allxyz_gpu, quick_cuest_data.allchg_gpu,
-        d_V));
+        handle, quick_cuest_struct.OEIntPlan, potential_compute_params, tmpWD, ntotalatom,
+        quick_cuest_data.allxyz_gpu, quick_cuest_data.allchg_gpu, d_V));
 
     MEMLOG_TMPWD ("Potential Integral Compute");
     cuestWorkspace_t *tmpVWorkspace = allocateWorkspace (tmpWD);
-    checkCuestErrors (
-        cuestPotentialCompute (handle, quick_cuest_struct.OEIntPlan, potential_compute_params,
-                               tmpVWorkspace, quick_cuest_data.ntotalatom,
-                               quick_cuest_data.allxyz_gpu, quick_cuest_data.allchg_gpu, d_V));
+    checkCuestErrors (cuestPotentialCompute (
+        handle, quick_cuest_struct.OEIntPlan, potential_compute_params, tmpVWorkspace, ntotalatom,
+        quick_cuest_data.allxyz_gpu, quick_cuest_data.allchg_gpu, d_V));
 
     freeWorkspace (tmpVWorkspace);
     checkCuestErrors (

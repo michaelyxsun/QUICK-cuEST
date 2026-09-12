@@ -116,7 +116,7 @@ typedef struct {
     uint64_t nauxshell;
     uint64_t maxcontract;
     uint64_t maxcontract_aux;
-    uint64_t ntotalatom;
+    uint64_t nextatom;
     double  *xyz;
     double  *allxyz_gpu;
     double  *allchg;

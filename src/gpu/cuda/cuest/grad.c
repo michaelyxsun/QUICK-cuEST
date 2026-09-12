@@ -134,19 +134,21 @@ cuest_get_T_grad (double *dTdR, double *P)
 void
 cuest_init_V_grad ()
 {
-    cuestHandle_t               handle = quick_cuest_struct.handle;
-    cuestWorkspaceDescriptor_t *tmpWD  = quick_cuest_struct.tmpWD;
-    uint64_t                    natom  = quick_cuest_data.natom;
+    cuestHandle_t               handle   = quick_cuest_struct.handle;
+    cuestWorkspaceDescriptor_t *tmpWD    = quick_cuest_struct.tmpWD;
+    uint64_t                    natom    = quick_cuest_data.natom;
+    uint64_t                    nextatom = quick_cuest_data.nextatom;
 
-    const size_t grad_siz = 3 * natom * sizeof (double);
+    const size_t grad_siz       = 3 * natom * sizeof (double);
+    const size_t ptchg_grad_siz = 3 * nextatom * sizeof (double);
     cudaMallocChecked (&quick_cuest_grad_mem.d_dVdR_bas, grad_siz);
-    cudaMallocChecked (&quick_cuest_grad_mem.d_dVdR_ptchg, grad_siz);
+    cudaMallocChecked (&quick_cuest_grad_mem.d_dVdR_ptchg, ptchg_grad_siz);
 
     checkCuestErrors (cuestParametersCreate (CUEST_POTENTIALDERIVATIVECOMPUTE_PARAMETERS,
                                              &quick_cuest_grad_mem.V_par));
     checkCuestErrors (cuestPotentialDerivativeComputeWorkspaceQuery (
         handle, quick_cuest_struct.OEIntPlan, quick_cuest_grad_mem.V_par, tmpWD,
-        quick_cuest_data.ntotalatom, quick_cuest_data.allxyz_gpu, quick_cuest_data.allchg_gpu, NULL,
+        quick_cuest_data.nextatom, quick_cuest_data.allxyz_gpu, quick_cuest_data.allchg_gpu, NULL,
         quick_cuest_grad_mem.d_dVdR_bas, quick_cuest_grad_mem.d_dVdR_ptchg));
 
     MEMLOG_TMPWD ("V grad");
@@ -162,9 +164,10 @@ cuest_deinit_V_grad ()
 
     cudaFreeChecked (quick_cuest_grad_mem.d_dVdR_bas);
     cudaFreeChecked (quick_cuest_grad_mem.d_dVdR_ptchg);
-    const size_t grad_siz = 3 * quick_cuest_data.natom * sizeof (double);
+    const size_t grad_siz       = 3 * quick_cuest_data.natom * sizeof (double);
+    const size_t ptchg_grad_siz = 3 * quick_cuest_data.nextatom * sizeof (double);
     free_dev_alloc (grad_siz);
-    free_dev_alloc (grad_siz);
+    free_dev_alloc (ptchg_grad_siz);
 }
 
 void
@@ -177,14 +180,15 @@ cuest_get_V_grad (double *dVdR_bas, double *dVdR_ptchg, double *P)
     uint64_t                    natom     = quick_cuest_data.natom;
 
     void        *d_P;
-    const size_t grad_siz = 3 * natom * sizeof (double);
-    const size_t P_siz    = nbasis * nbasis * sizeof (double);
+    const size_t grad_siz       = 3 * natom * sizeof (double);
+    const size_t ptchg_grad_siz = 3 * quick_cuest_data.nextatom * sizeof (double);
+    const size_t P_siz          = nbasis * nbasis * sizeof (double);
     cudaMallocChecked (&d_P, P_siz);
     cudaMemcpyChecked (d_P, P, P_siz, cudaMemcpyHostToDevice);
 
     checkCuestErrors (cuestPotentialDerivativeCompute (
         handle, quick_cuest_struct.OEIntPlan, quick_cuest_grad_mem.V_par,
-        quick_cuest_grad_mem.V_wksp, quick_cuest_data.ntotalatom, quick_cuest_data.allxyz_gpu,
+        quick_cuest_grad_mem.V_wksp, quick_cuest_data.nextatom, quick_cuest_data.allxyz_gpu,
         quick_cuest_data.allchg_gpu, d_P, quick_cuest_grad_mem.d_dVdR_bas,
         quick_cuest_grad_mem.d_dVdR_ptchg));
 
@@ -192,7 +196,7 @@ cuest_get_V_grad (double *dVdR_bas, double *dVdR_ptchg, double *P)
     free_dev_alloc (P_siz);
 
     cudaMemcpyChecked (dVdR_bas, quick_cuest_grad_mem.d_dVdR_bas, grad_siz, cudaMemcpyDeviceToHost);
-    cudaMemcpyChecked (dVdR_ptchg, quick_cuest_grad_mem.d_dVdR_ptchg, grad_siz,
+    cudaMemcpyChecked (dVdR_ptchg, quick_cuest_grad_mem.d_dVdR_ptchg, ptchg_grad_siz,
                        cudaMemcpyDeviceToHost);
 }
 

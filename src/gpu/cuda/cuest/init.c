@@ -55,7 +55,7 @@ cuest_init (int64_t natom, int64_t nshell, int64_t nbasis, int64_t nocc, int64_t
     // ========= //
 
     quick_cuest_data.natom           = natom;
-    quick_cuest_data.ntotalatom      = natom + nextatom;
+    quick_cuest_data.nextatom        = nextatom;
     quick_cuest_data.nshell          = nshell;
     quick_cuest_data.nocc            = nocc;
     quick_cuest_data.noccb           = noccb;
