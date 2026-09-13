@@ -216,17 +216,9 @@ contains
 #ifdef MPIV
      use mpi
 #endif
-#ifdef CUEST
-    use quick_cuest_module, only: cuest_correct_P, cuest_correct_C, &
-                                  CUEST_CORRECT_REORDER_AND_NORM_CUEST_TO_QUICK
-#endif
      implicit double precision(a-h,o-z)
   
      integer II,JJ,KK,LL,NBI1,NBI2,NBJ1,NBJ2,NBK1,NBK2,NBL1,NBL2,ierr
-#ifdef CUEST
-     double precision :: cuest_densetmp(nbasis, nbasis)
-     double precision :: cuest_cotmp(nbasis, quick_molspec%nelec / 2)
-#endif
      common /hrrstore/II,JJ,KK,LL,NBI1,NBI2,NBJ1,NBJ2,NBK1,NBK2,NBL1,NBL2
   
   !---------------------------------------------------------------------
@@ -294,29 +286,11 @@ contains
   
 !#if !defined(GPU) && !defined(MPIV_GPU)
 
-#ifdef CUEST
-     if (quick_method%usecuest) then
-        ! correct density and coefficient matrices
-        cuest_densetmp = quick_qm_struct%dense
-        cuest_cotmp = quick_qm_struct%co
-        call cuest_correct_P(quick_qm_struct%dense, CUEST_CORRECT_REORDER_AND_NORM_CUEST_TO_QUICK)
-        call cuest_correct_C(quick_qm_struct%co, CUEST_CORRECT_REORDER_AND_NORM_CUEST_TO_QUICK)
-     endif
-#endif
-
 #ifdef OSHELL
     call get_oshell_oneen_grad
 #else
     call get_cshell_oneen_grad
 !    call gpu_get_oei_grad(quick_qm_struct%gradient, quick_qm_struct%ptchg_gradient)
-#endif
-
-#ifdef CUEST
-     if (quick_method%usecuest) then
-        ! undo correction
-        quick_qm_struct%dense = cuest_densetmp
-        quick_qm_struct%co = cuest_cotmp
-     endif
 #endif
 
 !#endif
@@ -580,10 +554,14 @@ contains
 #endif
 #ifdef CUEST
      use quick_cuest_module, only: cuest_get_V_grad
+     use quick_cuest_module, only: cuest_correct_P, cuest_correct_C, &
+                                   CUEST_CORRECT_REORDER_AND_NORM_CUEST_TO_QUICK
 #endif
     implicit none
     integer :: Iatm, Imomentum, IIsh, JJsh, i, j, nshell_mpi
 #ifdef CUEST
+    double precision :: cuest_densetmp(nbasis, nbasis)
+    double precision :: cuest_cotmp(nbasis, quick_molspec%nelec/2)
     double precision :: cuest_gradbuf(3*natom)
     double precision :: cuest_gradbuf_ptchg(3*quick_molspec%nextatom)
 #endif
@@ -596,10 +574,29 @@ contains
   
      RECORD_TIME(timer_begin%T1eTGrad)
   
+#ifdef CUEST
+     if (quick_method%usecuest) then
+        ! correct density and coefficient matrices for QUICK kinetic compute
+        ! TODO: remove this when calling cuEST for kinetic compute
+        cuest_densetmp = quick_qm_struct%dense
+        cuest_cotmp = quick_qm_struct%co
+        call cuest_correct_P(quick_qm_struct%dense, CUEST_CORRECT_REORDER_AND_NORM_CUEST_TO_QUICK)
+        call cuest_correct_C(quick_qm_struct%co, CUEST_CORRECT_REORDER_AND_NORM_CUEST_TO_QUICK)
+     endif
+#endif
+
 #ifdef OSHELL
      call get_oshell_kinetic_grad
 #else
      call get_cshell_kinetic_grad
+#endif
+
+#ifdef CUEST
+     if (quick_method%usecuest) then
+        ! undo correction
+        quick_qm_struct%dense = cuest_densetmp
+        quick_qm_struct%co = cuest_cotmp
+     endif
 #endif
   
      RECORD_TIME(timer_end%T1eTGrad)

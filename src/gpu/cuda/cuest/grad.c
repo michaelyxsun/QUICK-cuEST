@@ -199,6 +199,8 @@ cuest_get_V_grad (double *grad, double *ptchg_grad, double *P)
 
     for (size_t i = 0, end = 3 * nextatom, di = 3 * natom; i < end; ++i)
         ptchg_grad[i] = grad_chg[i + di];
+
+    free (grad_chg);
 }
 
 void
